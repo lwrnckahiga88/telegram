@@ -1,9 +1,10 @@
 import { Bot } from "grammy";
 import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 
-// Inject environment variables for the LLM service
-process.env.BUILT_IN_FORGE_API_KEY = process.env.OPENAI_API_KEY;
-process.env.BUILT_IN_FORGE_API_URL = process.env.OPENAI_API_BASE;
+// Directly configure the ENV object for the LLM service
+ENV.forgeApiKey = process.env.OPENAI_API_KEY || "";
+ENV.forgeApiUrl = process.env.OPENAI_API_BASE || "";
 
 // The token provided by the user
 const BOT_TOKEN = "8991065272:AAHpJ6jU-cHpEiUvzpKUg2P-verU09Mo2gY";
