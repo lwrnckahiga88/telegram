@@ -4,8 +4,8 @@ import { ENV } from "./_core/env";
 
 // Directly configure the ENV object for the LLM service
 ENV.forgeApiKey = process.env.OPENAI_API_KEY || "";
-// Remove /v1/chat/completions if it exists in OPENAI_API_BASE because llm.ts appends it
-ENV.forgeApiUrl = (process.env.OPENAI_API_BASE || "").replace(/\/v1\/chat\/completions$/, "");
+// Remove /v1/chat/completions and /v1 if it exists in OPENAI_API_BASE because llm.ts appends /v1/chat/completions
+ENV.forgeApiUrl = (process.env.OPENAI_API_BASE || "").replace(/\/v1\/chat\/completions$/, "").replace(/\/v1$/, "");
 
 // The token provided by the user
 const BOT_TOKEN = "8991065272:AAHpJ6jU-cHpEiUvzpKUg2P-verU09Mo2gY";
@@ -29,12 +29,14 @@ bot.on("message:text", async (ctx) => {
     await ctx.replyWithChatAction("typing");
     
     // Call the project's built-in LLM service
+    console.log(`Calling LLM with URL: ${ENV.forgeApiUrl}`);
     const result = await invokeLLM({
       messages: [
         { role: "system", content: "You are a helpful assistant running as a Telegram bot named @lodwar_runtime_bot." },
         { role: "user", content: userText }
       ]
     });
+    console.log("LLM response received successfully");
     
     const responseText = result.choices[0].message.content;
     
