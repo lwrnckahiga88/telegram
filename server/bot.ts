@@ -4,7 +4,8 @@ import { ENV } from "./_core/env";
 
 // Directly configure the ENV object for the LLM service
 ENV.forgeApiKey = process.env.OPENAI_API_KEY || "";
-ENV.forgeApiUrl = process.env.OPENAI_API_BASE || "";
+// Remove /v1/chat/completions if it exists in OPENAI_API_BASE because llm.ts appends it
+ENV.forgeApiUrl = (process.env.OPENAI_API_BASE || "").replace(/\/v1\/chat\/completions$/, "");
 
 // The token provided by the user
 const BOT_TOKEN = "8991065272:AAHpJ6jU-cHpEiUvzpKUg2P-verU09Mo2gY";
