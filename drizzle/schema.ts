@@ -59,10 +59,10 @@ export const agents = mysqlTable("agents", {
   description: text("description"),
   capabilities: text("capabilities"), // JSON array of strings
   permissions: text("permissions"), // JSON array of strings
-  status: mysqlEnum("status", ["Draft", "Verified", "Published", "Installed", "Running", "Suspended", "Retired"]).default("Draft").notNull(),
+  status: mysqlEnum("status", ["Draft", "Verified", "Published", "Installed", "Running", "Updating", "Suspended", "Retired"]).default("Draft").notNull(),
   isFederated: boolean("isFederated").default(false).notNull(),
-  signature: text("signature"), // Digital signature
-  manifest: text("manifest"), // Full agent manifest as JSON
+  signature: text("signature"), // Ed25519 digital signature
+  manifest: text("manifest"), // Full agent manifest as JSON (name, version, author, permissions, commands)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -82,6 +82,43 @@ export const agentDeployments = mysqlTable("agent_deployments", {
   lastSync: timestamp("lastSync").defaultNow().notNull(),
 });
 
+export type AgentDeployment = typeof agentDeployments.$inferSelect;
+
+/**
+ * Federation Nodes: Peer nodes in the WRS federation network
+ */
+export const federationNodes = mysqlTable("federation_nodes", {
+  id: int("id").autoincrement().primaryKey(),
+  nodeId: varchar("nodeId", { length: 100 }).notNull().unique(),
+  organizationId: int("organizationId").references(() => organizations.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: varchar("url", { length: 500 }),
+  country: varchar("country", { length: 100 }).default("Kenya"),
+  version: varchar("version", { length: 50 }).default("5.0"),
+  status: mysqlEnum("status", ["Active", "Inactive", "Pending", "Suspended"]).default("Pending").notNull(),
+  publicKey: text("publicKey"),
+  capabilities: text("capabilities"),
+  lastHeartbeat: timestamp("lastHeartbeat"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type FederationNode = typeof federationNodes.$inferSelect;
+
+/**
+ * Audit Logs: Immutable audit trail for all kernel operations
+ */
+export const auditLogs = mysqlTable("audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  action: varchar("action", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 255 }),
+  resource: varchar("resource", { length: 255 }),
+  organizationId: int("organizationId").references(() => organizations.id),
+  details: text("details"),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AuditLog = typeof auditLogs.$inferSelect;
+
 export const conversations = mysqlTable("conversations", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().references(() => users.id),
@@ -92,6 +129,8 @@ export const conversations = mysqlTable("conversations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export type Conversation = typeof conversations.$inferSelect;
 
 export const documents = mysqlTable("documents", {
   id: int("id").autoincrement().primaryKey(),

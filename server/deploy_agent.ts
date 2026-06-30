@@ -1,33 +1,36 @@
-import { wrsRuntime } from "./wrs-os";
-import { ENV } from "./_core/env";
+/**
+ * WRS-OS Deployment Script
+ * Seeds the marketplace and deploys agents to an organization.
+ * Uses the WRS Kernel API.
+ */
+import { kernel } from "./kernel";
+import { seedInitialData } from "./kernel/seeder";
 
 async function deploy() {
-  console.log("Starting deployment process...");
-  
+  console.log("Starting WRS-OS deployment process...");
   try {
-    // 1. Ensure Marketplace is seeded
-    await wrsRuntime.seedMarketplace();
+    // 1. Seed marketplace
+    await seedInitialData();
     console.log("Marketplace seeded.");
 
-    // 2. Ensure Organization exists
-    let org = await wrsRuntime.getOrganizationByName("Lodwar Hospital");
+    // 2. Ensure organization exists
+    let org = await kernel.organization.getOrganizationByName("Lodwar Hospital");
     if (!org) {
       console.log("Creating organization: Lodwar Hospital...");
-      const orgId = await wrsRuntime.createOrganization("Lodwar Hospital", "Hospital", 1);
-      org = await wrsRuntime.getOrganizationByName("Lodwar Hospital");
+      await kernel.organization.createOrganization("Lodwar Hospital", "Hospital", 1);
+      org = await kernel.organization.getOrganizationByName("Lodwar Hospital");
     }
-    
     if (!org) throw new Error("Failed to retrieve organization after creation");
     console.log(`Organization ready: ${org.name} (ID: ${org.id})`);
 
-    // 3. Install Agent
+    // 3. Install agents
     const agentsToInstall = ["bpu-t1-v5.0-nurse", "wrs-lab-ai-v1.0"];
     for (const agentUid of agentsToInstall) {
       console.log(`Installing agent: ${agentUid}...`);
-      const agent = await wrsRuntime.installAgent(agentUid, org.id);
+      const agent = await kernel.agentRuntime.installAgent(agentUid, org.id);
       console.log(`Agent ${agent.name} installed.`);
     }
-    
+
     console.log("--- DEPLOYMENT SUCCESSFUL ---");
     console.log(`Organization: ${org.name}`);
     console.log(`Status: All agents running`);
