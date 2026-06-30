@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Bot } from "grammy";
 import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
