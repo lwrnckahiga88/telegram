@@ -1,10 +1,13 @@
-import { db } from "./db";
+import { getDb } from "./db";
 import { organizations, agents, agentDeployments, organizationMembers, users } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 export class WRSOSRuntime {
   // Organization Management
   async createOrganization(name: string, type: string, ownerId: number) {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
     const [result] = await db.insert(organizations).values({
       name,
       type,
@@ -24,20 +27,29 @@ export class WRSOSRuntime {
   }
 
   async listOrganizations() {
+    const db = await getDb();
+    if (!db) return [];
     return await db.select().from(organizations);
   }
 
   async getOrganizationByName(name: string) {
+    const db = await getDb();
+    if (!db) return null;
     const results = await db.select().from(organizations).where(eq(organizations.name, name));
     return results[0];
   }
 
   // Agent Marketplace
   async listMarketplaceAgents() {
+    const db = await getDb();
+    if (!db) return [];
     return await db.select().from(agents).where(eq(agents.status, 'Published'));
   }
 
   async installAgent(agentUid: string, organizationId: number) {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
     const agentResults = await db.select().from(agents).where(eq(agents.agentUid, agentUid));
     if (agentResults.length === 0) throw new Error("Agent not found");
     
@@ -54,6 +66,9 @@ export class WRSOSRuntime {
 
   // Seed initial marketplace data
   async seedMarketplace() {
+    const db = await getDb();
+    if (!db) return;
+    
     const initialAgents = [
       {
         agentUid: "bpu-t1-v5.0-nurse",
