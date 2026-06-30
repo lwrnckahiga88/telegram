@@ -17,6 +17,12 @@ if (!BOT_TOKEN) {
 
 export const bot = new Bot(BOT_TOKEN);
 
+// --- Middleware: Ensure Marketplace is Seeded ---
+bot.use(async (ctx, next) => {
+  await wrsRuntime.seedInitialData();
+  await next();
+});
+
 // --- Command Handlers ---
 
 bot.command("start", (ctx) => {
@@ -24,18 +30,43 @@ bot.command("start", (ctx) => {
 
 I am your Lodwar Runtime Bot, the command interface for your Enterprise Agent Runtime.
 
-Available Commands:
+*Marketplace Commands:*
 /market - Browse the Agent Marketplace
-/org_list - List your Organizations
-/org_create <name> - Create a new WRS Organization
+/search <query> - Search for specific agents
 /install <agent_uid> <org_name> - Deploy an agent to an organization
-/help - Show all commands`);
+
+*Organization Commands:*
+/org_list - List your Organizations
+/org_create <name> <type> - Create a new WRS Organization
+/org_status <org_name> - Check federation and agent status
+
+*Help:*
+/help - Show all commands`, { parse_mode: "Markdown" });
 });
 
-// Marketplace Command
+bot.command("help", (ctx) => {
+  ctx.reply(`*WRS-OS Command Reference*
+
+*Marketplace*
+• \`/market\` - List all published agents
+• \`/search <query>\` - Find agents by name or type
+• \`/install <agent_uid> <org_name>\` - Install agent to organization
+
+*Organizations*
+• \`/org_list\` - View all organizations you belong to
+• \`/org_create <name> <type>\` - Create a new organization (e.g., /org_create "Lodwar Hospital" Hospital)
+• \`/org_status <org_name>\` - Detailed health and federation status
+
+*Federation*
+• \`/fed_status <org_name>\` - Check peer connections and sync status
+
+*Agent Lifecycle*
+• \`/agents <org_name>\` - List agents running in an organization`, { parse_mode: "Markdown" });
+});
+
+// Marketplace & Search
 bot.command("market", async (ctx) => {
   try {
-    await wrsRuntime.seedMarketplace(); // Ensure seed data exists
     const agents = await wrsRuntime.listMarketplaceAgents();
     
     if (agents.length === 0) {
@@ -58,16 +89,36 @@ bot.command("market", async (ctx) => {
   }
 });
 
-// Organization Commands
-bot.command("org_create", async (ctx) => {
-  const orgName = ctx.match;
-  if (!orgName) return ctx.reply("Please provide an organization name: `/org_create Lodwar Hospital`", { parse_mode: "Markdown" });
+bot.command("search", async (ctx) => {
+  const query = ctx.match;
+  if (!query) return ctx.reply("Please provide a search term: `/search nurse`", { parse_mode: "Markdown" });
 
   try {
-    // In a real app, we'd get the userId from the telegram account mapping
-    // For now, we'll use a placeholder or the first user in DB
-    const orgId = await wrsRuntime.createOrganization(orgName, "General", 1);
-    ctx.reply(`✅ Organization *${orgName}* created successfully!`, { parse_mode: "Markdown" });
+    const results = await wrsRuntime.searchAgents(query);
+    if (results.length === 0) return ctx.reply(`No agents found matching "${query}".`);
+
+    let response = `🔍 *Search Results for "${query}"*\n\n`;
+    results.forEach(agent => {
+      response += `🔹 *${agent.name}* (\`${agent.agentUid}\`)\n`;
+      response += `Type: ${agent.type}\n\n`;
+    });
+    await ctx.reply(response, { parse_mode: "Markdown" });
+  } catch (error) {
+    ctx.reply("Search failed.");
+  }
+});
+
+// Organization Management
+bot.command("org_create", async (ctx) => {
+  const args = ctx.match.split(" ");
+  if (args.length < 1) return ctx.reply("Usage: `/org_create <name> [type]`", { parse_mode: "Markdown" });
+
+  const name = args[0];
+  const type = args[1] || "General";
+
+  try {
+    const orgId = await wrsRuntime.createOrganization(name, type, 1);
+    ctx.reply(`✅ Organization *${name}* created successfully!\nID: ${orgId}`, { parse_mode: "Markdown" });
   } catch (error) {
     console.error("Org create error:", error);
     ctx.reply("Failed to create organization. It might already exist.");
@@ -89,7 +140,34 @@ bot.command("org_list", async (ctx) => {
   }
 });
 
-// Install Command
+bot.command("org_status", async (ctx) => {
+  const orgName = ctx.match;
+  if (!orgName) return ctx.reply("Usage: `/org_status <org_name>`");
+
+  try {
+    const org = await wrsRuntime.getOrganizationByName(orgName);
+    if (!org) return ctx.reply(`Organization "${orgName}" not found.`);
+
+    const fed = await wrsRuntime.getFederationStatus(org.id);
+    const installed = await wrsRuntime.listOrgAgents(org.id);
+
+    let response = `📊 *Status: ${org.name}*\n\n`;
+    response += `*Federation:* ${fed?.status || 'Inactive'}\n`;
+    response += `*Peers:* ${fed?.peers || 0}\n`;
+    response += `*Last Sync:* ${fed?.lastSync.toLocaleString() || 'Never'}\n\n`;
+    
+    response += `*Deployed Agents:* ${installed.length}\n`;
+    installed.forEach(a => {
+      response += `• ${a.name} (${(a as any).deploymentStatus})\n`;
+    });
+
+    await ctx.reply(response, { parse_mode: "Markdown" });
+  } catch (error) {
+    ctx.reply("Failed to get status.");
+  }
+});
+
+// Install & Deployment
 bot.command("install", async (ctx) => {
   const args = ctx.match.split(" ");
   if (args.length < 2) return ctx.reply("Usage: `/install <agent_uid> <org_name>`", { parse_mode: "Markdown" });
@@ -101,18 +179,41 @@ bot.command("install", async (ctx) => {
     if (!org) return ctx.reply(`Organization "${orgName}" not found.`);
 
     const agent = await wrsRuntime.installAgent(agentUid, org.id);
-    ctx.reply(`🚀 *Deployment Started!*\n\nAgent: ${agent.name}\nOrganization: ${org.name}\nStatus: Running`, { parse_mode: "Markdown" });
+    ctx.reply(`🚀 *Deployment Started!*\n\nAgent: ${agent.name}\nOrganization: ${org.name}\nStatus: Running\nFederated: ${agent.isFederated ? 'Yes' : 'No'}`, { parse_mode: "Markdown" });
   } catch (error) {
     console.error("Install error:", error);
     ctx.reply(`Failed to install agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 });
 
-// --- AI Chat Handler ---
+bot.command("agents", async (ctx) => {
+  const orgName = ctx.match;
+  if (!orgName) return ctx.reply("Usage: `/agents <org_name>`");
 
+  try {
+    const org = await wrsRuntime.getOrganizationByName(orgName);
+    if (!org) return ctx.reply(`Organization "${orgName}" not found.`);
+
+    const agents = await wrsRuntime.listOrgAgents(org.id);
+    if (agents.length === 0) return ctx.reply(`No agents deployed in ${orgName}.`);
+
+    let response = `🤖 *Agents in ${orgName}*\n\n`;
+    agents.forEach(a => {
+      response += `• *${a.name}* (v${a.version})\n`;
+      response += `  Status: ${(a as any).deploymentStatus}\n`;
+      response += `  Installed: ${(a as any).installedAt.toLocaleDateString()}\n\n`;
+    });
+
+    await ctx.reply(response, { parse_mode: "Markdown" });
+  } catch (error) {
+    ctx.reply("Failed to list agents.");
+  }
+});
+
+// --- AI Chat Handler ---
 bot.on("message:text", async (ctx) => {
   const userText = ctx.message.text;
-  if (userText.startsWith("/")) return; // Skip commands
+  if (userText.startsWith("/")) return; 
 
   try {
     await ctx.replyWithChatAction("typing");
@@ -120,7 +221,7 @@ bot.on("message:text", async (ctx) => {
     const result = await invokeLLM({
       model: "gpt-4.1-mini",
       messages: [
-        { role: "system", content: "You are a helpful assistant running as a Telegram bot named @lodwar_runtime_bot. You are the command interface for WRS-OS, a Federated Agent Marketplace." },
+        { role: "system", content: "You are a helpful assistant running as a Telegram bot named @lodwar_runtime_bot. You are the command interface for WRS-OS, a Federated Agent Marketplace. You help users manage organizations, browse agents, and deploy them. Be professional and technical." },
         { role: "user", content: userText }
       ]
     });
