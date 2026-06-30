@@ -21,14 +21,16 @@ async function deploy() {
     console.log(`Organization ready: ${org.name} (ID: ${org.id})`);
 
     // 3. Install Agent
-    const agentUid = "bpu-t1-v5.0-nurse";
-    console.log(`Installing agent: ${agentUid}...`);
-    const agent = await wrsRuntime.installAgent(agentUid, org.id);
+    const agentsToInstall = ["bpu-t1-v5.0-nurse", "wrs-lab-ai-v1.0"];
+    for (const agentUid of agentsToInstall) {
+      console.log(`Installing agent: ${agentUid}...`);
+      const agent = await wrsRuntime.installAgent(agentUid, org.id);
+      console.log(`Agent ${agent.name} installed.`);
+    }
     
     console.log("--- DEPLOYMENT SUCCESSFUL ---");
-    console.log(`Agent: ${agent.name}`);
     console.log(`Organization: ${org.name}`);
-    console.log(`Status: Running`);
+    console.log(`Status: All agents running`);
   } catch (error) {
     console.error("Deployment failed:", error);
     process.exit(1);

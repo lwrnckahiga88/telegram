@@ -33,6 +33,14 @@ export class WRSOSRuntime {
     return this.orgs.find(o => o.name === name) || null;
   }
 
+  async listAgentsByOrganization(organizationId: number) {
+    const orgDeployments = this.deployments.filter(d => d.organizationId === organizationId);
+    return orgDeployments.map(d => {
+      const agent = this.agentsList.find(a => a.id === d.agentId);
+      return { ...agent, deploymentStatus: d.status, installedAt: d.installedAt };
+    });
+  }
+
   // Agent Marketplace
   async listMarketplaceAgents() {
     return this.agentsList.filter(a => a.status === 'Published');

@@ -7,11 +7,11 @@ import { wrsRuntime } from "./wrs-os";
 ENV.forgeApiKey = process.env.OPENAI_API_KEY || "";
 ENV.forgeApiUrl = "https://api.manus.im/api/llm-proxy";
 
-// The token provided by the user
-const BOT_TOKEN = "8991065272:AAHpJ6jU-cHpEiUvzpKUg2P-verU09Mo2gY";
+// The token is now securely read from environment variables
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 if (!BOT_TOKEN) {
-  throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  throw new Error("TELEGRAM_BOT_TOKEN is not configured in .env");
 }
 
 export const bot = new Bot(BOT_TOKEN);
