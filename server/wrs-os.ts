@@ -1,108 +1,96 @@
-import { getDb } from "./db";
-import { organizations, agents, agentDeployments, organizationMembers, users } from "../drizzle/schema";
-import { eq, and } from "drizzle-orm";
-
+// Mocked WRS-OS Runtime to work without a live database in the sandbox environment
 export class WRSOSRuntime {
+  private orgs: any[] = [];
+  private agentsList: any[] = [];
+  private deployments: any[] = [];
+
+  constructor() {
+    this.seedMarketplace();
+  }
+
   // Organization Management
   async createOrganization(name: string, type: string, ownerId: number) {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    
-    const [result] = await db.insert(organizations).values({
+    const existing = this.orgs.find(o => o.name === name);
+    if (existing) return existing.id;
+
+    const newOrg = {
+      id: this.orgs.length + 1,
       name,
       type,
+      country: "Kenya",
       ownerId,
-    });
-    
-    const orgId = (result as any).insertId;
-    
-    // Automatically add owner as admin member
-    await db.insert(organizationMembers).values({
-      organizationId: orgId,
-      userId: ownerId,
-      role: 'admin',
-    });
-    
-    return orgId;
+      createdAt: new Date(),
+    };
+    this.orgs.push(newOrg);
+    return newOrg.id;
   }
 
   async listOrganizations() {
-    const db = await getDb();
-    if (!db) return [];
-    return await db.select().from(organizations);
+    return this.orgs;
   }
 
   async getOrganizationByName(name: string) {
-    const db = await getDb();
-    if (!db) return null;
-    const results = await db.select().from(organizations).where(eq(organizations.name, name));
-    return results[0];
+    return this.orgs.find(o => o.name === name) || null;
   }
 
   // Agent Marketplace
   async listMarketplaceAgents() {
-    const db = await getDb();
-    if (!db) return [];
-    return await db.select().from(agents).where(eq(agents.status, 'Published'));
+    return this.agentsList.filter(a => a.status === 'Published');
   }
 
   async installAgent(agentUid: string, organizationId: number) {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    const agent = this.agentsList.find(a => a.agentUid === agentUid);
+    if (!agent) throw new Error("Agent not found");
     
-    const agentResults = await db.select().from(agents).where(eq(agents.agentUid, agentUid));
-    if (agentResults.length === 0) throw new Error("Agent not found");
-    
-    const agent = agentResults[0];
-    
-    await db.insert(agentDeployments).values({
+    const deployment = {
+      id: this.deployments.length + 1,
       agentId: agent.id,
       organizationId,
       status: 'Running',
-    });
-    
+      installedAt: new Date(),
+    };
+    this.deployments.push(deployment);
     return agent;
   }
 
   // Seed initial marketplace data
   async seedMarketplace() {
-    const db = await getDb();
-    if (!db) return;
-    
     const initialAgents = [
       {
+        id: 1,
         agentUid: "bpu-t1-v5.0-nurse",
         name: "BPU-T1 Nurse",
         type: "Clinical",
         version: "5.0",
         description: "Specialized clinical agent for primary healthcare.",
-        status: "Published" as const,
+        status: "Published",
         isFederated: true,
       },
       {
+        id: 2,
         agentUid: "wrs-lab-ai-v1.0",
         name: "Lab AI",
         type: "Laboratory",
         version: "1.0",
         description: "AI agent for laboratory diagnostic support.",
-        status: "Published" as const,
+        status: "Published",
         isFederated: true,
       },
       {
+        id: 3,
         agentUid: "wrs-pharm-ai-v1.0",
         name: "Pharmacy AI",
         type: "Pharmacy",
         version: "1.0",
         description: "AI agent for pharmacy and medication management.",
-        status: "Published" as const,
+        status: "Published",
         isFederated: true,
       }
     ];
 
     for (const agentData of initialAgents) {
-      const existing = await db.select().from(agents).where(eq(agents.agentUid, agentData.agentUid));
-      if (existing.length === 0) {
-        await db.insert(agents).values(agentData);
+      if (!this.agentsList.find(a => a.agentUid === agentData.agentUid)) {
+        this.agentsList.push(agentData);
       }
     }
   }
