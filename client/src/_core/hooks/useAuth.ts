@@ -9,8 +9,15 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
+  const { redirectOnUnauthenticated = false, redirectPath: redirectPathOverride } =
     options ?? {};
+  // Lazily computed: only calls getLoginUrl() (which touches env vars/URL
+  // parsing) when actually needed, not as an eagerly-evaluated default
+  // parameter on every render of every component that calls useAuth().
+  const redirectPath = useMemo(
+    () => redirectPathOverride ?? getLoginUrl(),
+    [redirectPathOverride]
+  );
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
