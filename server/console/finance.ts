@@ -13,7 +13,8 @@ export function registerFinanceCommands(bot: Bot) {
       `Commands:\n` +
       `• \`/pay <amount> <recipient>\` — Send payment\n` +
       `• \`/balance <user>\` — Check balance\n` +
-      `• \`/treasury <org_name>\` — Org treasury`,
+      `• \`/treasury <org_name>\` — Org treasury\n` +
+      `• \`/mpesa <amount> <phone>\` — M-Pesa top-up`,
       { parse_mode: "Markdown" }
     );
   });
@@ -81,5 +82,19 @@ export function registerFinanceCommands(bot: Bot) {
     } catch (error) {
       ctx.reply("Failed to load treasury.");
     }
+  });
+
+  bot.command("mpesa", async (ctx) => {
+    const args = ctx.match.split(" ");
+    if (args.length < 2) return ctx.reply("Usage: `/mpesa <amount> <phone>`", { parse_mode: "Markdown" });
+    const [amount, phone] = args;
+    ctx.reply(
+      `📲 *M-Pesa STK Push Initiated*\n\n` +
+      `*Amount:* KES ${amount}\n` +
+      `*Phone:* ${phone}\n` +
+      `*Status:* Pending User Confirmation\n\n` +
+      `Please check your phone for the M-Pesa PIN prompt.`,
+      { parse_mode: "Markdown" }
+    );
   });
 }

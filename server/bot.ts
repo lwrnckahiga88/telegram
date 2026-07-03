@@ -99,7 +99,7 @@ bot.command("help", (ctx) => {
     `\`/patient <id>\` \`/lab <id>\` \`/ssd <id>\` \`/partograph <id>\` \`/who <id>\` \`/paed <id>\`\n\n` +
 
     `*Finance Module*\n` +
-    `\`/wallet\` \`/balance <user>\` \`/pay <amount> <recipient>\` \`/vote <proposal> <yes|no>\` \`/treasury <org>\`\n\n` +
+    `\`/wallet\` \`/balance <user>\` \`/pay <amount> <recipient>\` \`/vote <proposal> <yes|no>\` \`/treasury <org>\` \`/mpesa <amount> <phone>\`\n\n` +
 
     `*Knowledge Module*\n` +
     `\`/graph <topic>\` \`/discover <topic>\` \`/reason <question>\` \`/history <entity>\`\n\n` +
