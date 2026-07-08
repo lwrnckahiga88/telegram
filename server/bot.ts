@@ -63,6 +63,7 @@ bot.command("start", (ctx) => {
     `🏪 \`/market\` — Agent Marketplace\n` +
     `🤖 \`/agents <org>\` — Agent Runtime\n` +
     `🏥 \`/patient <id>\` — Clinical Module\n` +
+    `👶 \`/paed <id>\` — Paediatric Module\n` +
     `💰 \`/wallet\` — Finance & Wallet+\n` +
     `🧠 \`/graph <topic>\` — Knowledge Graph\n` +
     `🔌 \`/connectors\` — Connector Manager\n\n` +
